@@ -40,6 +40,11 @@ func main() {
 
 	client := pb.NewDoc2VecServiceClient(conn)
 
+	aiChatter, err := utils.NewAiChatter()
+	if err != nil {
+		sugar.Fatalf("Failed to create AIChatter: %v", err)
+	}
+
 	db, err := utils.NewDB()
 	if err != nil {
 		sugar.Fatal("Failed to create DB: %v", err)
@@ -60,7 +65,7 @@ func main() {
 	zero.OnCommand("$stats", utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateStatsHandler(sugar, db))
 	zero.OnCommand("$rv", utils.NewIsAdminRule(adminId)).Handle(handlers.CreateRebuildHandler(sugar, client, db))
 	zero.OnMessage(utils.NewGroupCheckRule(groupId), utils.NewAtMeRule()).Handle(handlers.CreateAtMeHandler(sugar, client, db))
-	zero.OnMessage(utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateMsgHandler(sugar, client, db))
+	zero.OnMessage(utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateMsgHandler(sugar, client, aiChatter, db))
 
 	sugar.Infof("Start Run")
 	wsAddr := os.Getenv("WS_ADDR")

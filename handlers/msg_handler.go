@@ -21,7 +21,7 @@ var (
 	msgLock        sync.Mutex
 )
 
-func CreateMsgHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClient, db *utils.DB) func(ctx *zero.Ctx) {
+func CreateMsgHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClient, aiChatter *utils.AIChatter, db *utils.DB) func(ctx *zero.Ctx) {
 	nonHitProb, err := strconv.ParseFloat(os.Getenv("NON_HIT_PROB"), 10)
 	if err != nil {
 		nonHitProb = 0.05
@@ -32,8 +32,20 @@ func CreateMsgHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClient, 
 		hitProb = 0.1
 	}
 
+	aiFeedProb, err := strconv.ParseFloat(os.Getenv("AI_FEED_PROB"), 10)
+	if err != nil {
+		aiFeedProb = 0.8
+	}
+
+	aiRequestProb, err := strconv.ParseFloat(os.Getenv("AI_REQUEST_PROB"), 10)
+	if err != nil {
+		aiRequestProb = 0.1
+	}
+
 	hitPb := utils.NewProbGenerator(hitProb)
 	nonHitPb := utils.NewProbGenerator(nonHitProb)
+	aiFeedPb := utils.NewProbGenerator(aiFeedProb)
+	aiReqPb := utils.NewProbGenerator(aiRequestProb)
 
 	return func(ctx *zero.Ctx) {
 		timer := time.Now()
@@ -43,6 +55,10 @@ func CreateMsgHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClient, 
 
 		msg := ctx.Event.Message.ExtractPlainText()
 		utils.MessageRecCounter.Inc()
+
+		if msg != "" && aiFeedPb.Get() {
+			aiChatter.Feed(msg)
+		}
 
 		doc2vecTimer := time.Now()
 		resp, err := client.GetDoc2Vec(context.Background(), &pb.Doc2VecRequest{Text: msg})
@@ -66,6 +82,18 @@ func CreateMsgHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClient, 
 		go db.SaveMessage(lastMessage, lastMessageVec, msg)
 		lastMessage = msg
 		lastMessageVec = vec
+
+		if msg != "" && aiReqPb.Get() {
+			aiResp, err := aiChatter.GetRespond(context.Background(), msg)
+			if err != nil {
+				sugar.Errorf("Failed to get response from AI: %v", err)
+				return
+			}
+			if aiResp != "" {
+				ctx.Send("> " + aiResp)
+				return
+			}
+		}
 
 		exists, next, err := db.MessageExists(msg)
 		if exists {

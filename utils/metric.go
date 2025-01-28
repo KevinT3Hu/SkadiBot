@@ -10,7 +10,6 @@ import (
 )
 
 func StartMetric() {
-
 	metric_port := os.Getenv("METRIC_PORT")
 	if metric_port == "" {
 		metric_port = "2112"
@@ -21,9 +20,7 @@ func StartMetric() {
 	http.ListenAndServe(":"+metric_port, servmux)
 }
 
-var (
-	latencyBucket = []float64{1, 3, 5, 7, 10, 20, 50, 100, 500, 1000}
-)
+var latencyBucket = []float64{1, 3, 5, 7, 10, 20, 50, 100, 500, 1000}
 
 var (
 	MessageRecCounter = promauto.NewCounter(prometheus.CounterOpts{
@@ -55,6 +52,17 @@ var (
 	TotalLatency = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "total_latency",
 		Help:    "Total latency",
+		Buckets: latencyBucket,
+	})
+
+	AIRequestCounter = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "ai_request_total",
+		Help: "The total number of AI requests",
+	})
+
+	AIRequestLatency = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "ai_request_latency",
+		Help:    "Latency of AI request",
 		Buckets: latencyBucket,
 	})
 )
