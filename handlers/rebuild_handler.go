@@ -16,6 +16,8 @@ var RebuildLock sync.Mutex
 
 func CreateRebuildHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClient, db *utils.DB) func(ctx *zero.Ctx) {
 	return func(ctx *zero.Ctx) {
+		ctx.Block()
+
 		RebuildLock.Lock()
 		defer RebuildLock.Unlock()
 

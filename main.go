@@ -16,7 +16,6 @@ import (
 )
 
 func main() {
-
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Printf("Failed to create logger: %v, no logs will be printed thus far", err)
@@ -58,10 +57,10 @@ func main() {
 
 	go utils.StartMetric()
 
-	zero.OnMessage(utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateMsgHandler(sugar, client, db))
-	zero.OnMessage(utils.NewGroupCheckRule(groupId), utils.NewAtMeRule()).Handle(handlers.CreateAtMeHandler(sugar, client, db))
-	zero.OnCommand("$rv", utils.NewIsAdminRule(adminId)).Handle(handlers.CreateRebuildHandler(sugar, client, db))
 	zero.OnCommand("$stats", utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateStatsHandler(sugar, db))
+	zero.OnCommand("$rv", utils.NewIsAdminRule(adminId)).Handle(handlers.CreateRebuildHandler(sugar, client, db))
+	zero.OnMessage(utils.NewGroupCheckRule(groupId), utils.NewAtMeRule()).Handle(handlers.CreateAtMeHandler(sugar, client, db))
+	zero.OnMessage(utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateMsgHandler(sugar, client, db))
 
 	sugar.Infof("Start Run")
 	wsAddr := os.Getenv("WS_ADDR")

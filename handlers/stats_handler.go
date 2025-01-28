@@ -13,6 +13,7 @@ import (
 
 func CreateStatsHandler(sugar *zap.SugaredLogger, db *utils.DB) func(*zero.Ctx) {
 	return func(ctx *zero.Ctx) {
+		ctx.Block()
 		sugar.Info("Stats handler called")
 		// get memory usage
 		pUsage, total, free, err := getMemoryUsage()

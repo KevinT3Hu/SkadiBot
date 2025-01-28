@@ -16,6 +16,9 @@ func CreateAtMeHandler(suger *zap.SugaredLogger, client pb.Doc2VecServiceClient,
 		defer func() {
 			utils.TotalLatency.Observe(float64(time.Since(timer).Milliseconds()))
 		}()
+
+		ctx.Block()
+
 		msg := ctx.Event.Message.ExtractPlainText()
 		utils.MessageRecCounter.Inc()
 		doc2vecTimer := time.Now()

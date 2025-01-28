@@ -5,6 +5,7 @@ import (
 	"os"
 	"skadi_bot/utils"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,12 +16,12 @@ import (
 )
 
 var (
-	lastMessage string
-	msgLock     sync.Mutex
+	lastMessageVec []float32
+	lastMessage    string
+	msgLock        sync.Mutex
 )
 
 func CreateMsgHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClient, db *utils.DB) func(ctx *zero.Ctx) {
-
 	nonHitProb, err := strconv.ParseFloat(os.Getenv("NON_HIT_PROB"), 10)
 	if err != nil {
 		nonHitProb = 0.05
@@ -52,16 +53,19 @@ func CreateMsgHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClient, 
 			return
 		}
 
+		vec := resp.GetVector()
+
 		msgLock.Lock()
 		defer msgLock.Unlock()
 
-		if lastMessage == "" || msg == "" {
+		if lastMessage == "" || toBeFiltered(msg) {
 			lastMessage = msg
+			lastMessageVec = vec
 			return
 		}
-		vec := resp.GetVector()
-		go db.SaveMessage(lastMessage, vec, msg)
+		go db.SaveMessage(lastMessage, lastMessageVec, msg)
 		lastMessage = msg
+		lastMessageVec = vec
 
 		exists, next, err := db.MessageExists(msg)
 		if exists {
@@ -94,4 +98,9 @@ func CreateMsgHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClient, 
 			return
 		}
 	}
+}
+
+// If message is blank or contains url
+func toBeFiltered(m string) bool {
+	return m == "" || strings.Contains(m, "bilibili.com")
 }
