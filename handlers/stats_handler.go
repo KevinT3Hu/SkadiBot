@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func CreateStatsHandler(sugar *zap.SugaredLogger, db *utils.DB) func(*zero.Ctx) {
+func CreateStatsHandler(sugar *zap.SugaredLogger, db *utils.DB, aiChatter *utils.AIChatter) func(*zero.Ctx) {
 	return func(ctx *zero.Ctx) {
 		ctx.Block()
 		sugar.Info("Stats handler called")
@@ -39,7 +39,9 @@ func CreateStatsHandler(sugar *zap.SugaredLogger, db *utils.DB) func(*zero.Ctx) 
 
 		upTime := timeToHumanReadable(time.Since(utils.StartTime))
 
-		msg := fmt.Sprintf("Memory usage: %s\nTotal: %s\nFree: %s\nDB size: %s\nTable size: %s\nDB row count: %d\nUp time: %s", pUsage, total, free, dbSize, tableSize, dbRowCount, upTime)
+		contextLength := aiChatter.GetChatContextLength()
+
+		msg := fmt.Sprintf("Memory usage: %s\nTotal: %s\nFree: %s\nDB size: %s\nTable size: %s\nDB row count: %d\nUp time: %s\nChat Context Length: %d", pUsage, total, free, dbSize, tableSize, dbRowCount, upTime, contextLength)
 
 		ctx.Send(msg)
 	}

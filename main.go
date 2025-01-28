@@ -62,9 +62,10 @@ func main() {
 
 	go utils.StartMetric()
 
-	zero.OnCommand("$stats", utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateStatsHandler(sugar, db))
+	zero.OnCommand("$ct", utils.NewGroupCheckRule(groupId), utils.NewIsAdminRule(adminId)).Handle(handlers.CreateClearContextHandler(sugar, aiChatter))
+	zero.OnCommand("$stats", utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateStatsHandler(sugar, db, aiChatter))
 	zero.OnCommand("$rv", utils.NewIsAdminRule(adminId)).Handle(handlers.CreateRebuildHandler(sugar, client, db))
-	zero.OnMessage(utils.NewGroupCheckRule(groupId), utils.NewAtMeRule()).Handle(handlers.CreateAtMeHandler(sugar, client, db))
+	zero.OnMessage(utils.NewGroupCheckRule(groupId), utils.NewAtMeRule()).Handle(handlers.CreateAtMeHandler(sugar, aiChatter))
 	zero.OnMessage(utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateMsgHandler(sugar, client, aiChatter, db))
 
 	sugar.Infof("Start Run")

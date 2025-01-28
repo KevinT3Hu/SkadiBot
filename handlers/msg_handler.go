@@ -89,6 +89,7 @@ func CreateMsgHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClient, 
 				sugar.Errorf("Failed to get response from AI: %v", err)
 				return
 			}
+			sugar.Infof("Getting AI Response: %d", aiResp)
 			if aiResp != "" {
 				ctx.Send("> " + aiResp)
 				return

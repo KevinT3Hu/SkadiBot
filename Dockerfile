@@ -13,6 +13,7 @@ FROM debian:bookworm-slim
 
 WORKDIR /app
 COPY --from=builder /app/skadi_bot .
+RUN apt-get update && apt-get install -y ca-certificates=20230311 --no-install-recommends && rm -rf /var/lib/apt/lists/*
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 CMD ["./entrypoint.sh"]

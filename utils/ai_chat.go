@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 type AIChatter struct {
 	client          *openai.Client
 	chatContext     []openai.ChatCompletionMessage
+	contextLock     sync.Mutex
 	lastRequestTime atomic.Int64
 }
 
@@ -24,7 +27,8 @@ func NewAiChatter() (*AIChatter, error) {
 		return nil, err
 	}
 
-	config := openai.DefaultConfig(string(apiKey))
+	apiKeyS := strings.TrimSpace(string(apiKey))
+	config := openai.DefaultConfig(apiKeyS)
 	config.BaseURL = baseUrl
 	client := openai.NewClientWithConfig(config)
 
@@ -40,6 +44,8 @@ func (c *AIChatter) Feed(msg string) {
 		Content: msg,
 	}
 
+	c.contextLock.Lock()
+	defer c.contextLock.Unlock()
 	c.chatContext = append(c.chatContext, m)
 
 	// if the context is too long, remove the oldest message
@@ -48,18 +54,33 @@ func (c *AIChatter) Feed(msg string) {
 	}
 }
 
-var systemHint = openai.ChatCompletionMessage{
-	Role:    "system",
-	Content: os.Getenv("AI_SYSTEM_HINT"),
+var (
+	systemHint = os.Getenv("AI_SYSTEM_HINT")
+	atHint     = os.Getenv("AI_AT_HINT")
+)
+
+func (c *AIChatter) GetAtRespond(ctx context.Context, msg string) (string, error) {
+	response, err := c.getRespondWithPrompt(ctx, msg, atHint)
+	if err != nil {
+		return "", err
+	}
+	return response, nil
 }
 
-func (c *AIChatter) GetRespond(ctx context.Context, msg string) (string, error) {
+func (c *AIChatter) getRespondWithPrompt(ctx context.Context, msg string, prompt string) (string, error) {
 	if !c.getIsRequestable() {
 		return "", errors.New("request too frequent")
 	}
 	AIRequestCounter.Inc()
 	c.Feed(msg)
-	messages := append([]openai.ChatCompletionMessage{systemHint}, c.chatContext...)
+	c.contextLock.Lock()
+	messages := append([]openai.ChatCompletionMessage{
+		{
+			Role:    "system",
+			Content: prompt,
+		},
+	}, c.chatContext...)
+	c.contextLock.Unlock()
 	req := openai.ChatCompletionRequest{
 		Model:               os.Getenv("AI_MODEL"),
 		Messages:            messages,
@@ -76,10 +97,30 @@ func (c *AIChatter) GetRespond(ctx context.Context, msg string) (string, error) 
 	return ret.Choices[0].Message.Content, nil
 }
 
+func (c *AIChatter) GetRespond(ctx context.Context, msg string) (string, error) {
+	response, err := c.getRespondWithPrompt(ctx, msg, systemHint)
+	if err != nil {
+		return "", err
+	}
+	return response, nil
+}
+
 func (c *AIChatter) getIsRequestable() bool {
 	return time.Now().Unix()-c.lastRequestTime.Load() > 30
 }
 
 func (c *AIChatter) updateRequestTime() {
 	c.lastRequestTime.Store(time.Now().Unix())
+}
+
+func (c *AIChatter) GetChatContextLength() int {
+	c.contextLock.Lock()
+	defer c.contextLock.Unlock()
+	return len(c.chatContext)
+}
+
+func (c *AIChatter) ClearChatContext() {
+	c.contextLock.Lock()
+	defer c.contextLock.Unlock()
+	c.chatContext = []openai.ChatCompletionMessage{}
 }
