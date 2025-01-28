@@ -103,6 +103,8 @@ func CreateMsgHandler(client pb.Doc2VecServiceClient, aiChatter *utils.AIChatter
 			if aiResp != "" {
 				msgSend := "> " + aiResp
 				utils.SLogger.Info("Send response", "msg", msg, "response", msgSend, "source", "msg_handler")
+				ctx.Send(msgSend)
+				ctx.Block()
 				return
 			}
 		}
@@ -122,6 +124,7 @@ func CreateMsgHandler(client pb.Doc2VecServiceClient, aiChatter *utils.AIChatter
 			utils.MessageHitReplyCounter.Inc()
 			utils.SLogger.Info("Send response", "msg", msg, "next", next, "source", "msg_handler")
 			ctx.Send(next)
+			ctx.Block()
 			return
 		}
 
@@ -135,6 +138,7 @@ func CreateMsgHandler(client pb.Doc2VecServiceClient, aiChatter *utils.AIChatter
 			utils.MessageMissReplyCounter.Inc()
 			utils.SLogger.Info("Send response", "msg", msg, "nearestNext", nearestNext, "source", "msg_handler")
 			ctx.Send(nearestNext)
+			ctx.Block()
 			return
 		}
 	}
