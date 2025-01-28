@@ -4,14 +4,14 @@ import (
 	"skadi_bot/utils"
 
 	zero "github.com/wdvxdr1123/ZeroBot"
-	"go.uber.org/zap"
 )
 
-func CreateClearContextHandler(sugar *zap.SugaredLogger, aiChatter *utils.AIChatter) func(ctx *zero.Ctx) {
+func CreateClearContextHandler(aiChatter *utils.AIChatter) func(ctx *zero.Ctx) {
 	return func(ctx *zero.Ctx) {
+		utils.SLogger.Info("Clearing chat context", "source", "clear_context")
 		ctx.Block()
 		aiChatter.ClearChatContext()
-		sugar.Info("Chat context cleared")
+		utils.SLogger.Info("Chat context cleared", "source", "clear_context")
 		ctx.Send("Chat context cleared")
 	}
 }

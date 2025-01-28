@@ -8,18 +8,17 @@ import (
 	"time"
 
 	zero "github.com/wdvxdr1123/ZeroBot"
-	"go.uber.org/zap"
 )
 
-func CreateStatsHandler(sugar *zap.SugaredLogger, db *utils.DB, aiChatter *utils.AIChatter) func(*zero.Ctx) {
+func CreateStatsHandler(db *utils.DB, aiChatter *utils.AIChatter) func(*zero.Ctx) {
 	return func(ctx *zero.Ctx) {
 		ctx.Block()
-		sugar.Info("Stats handler called")
+		utils.SLogger.Info("Getting stats", "source", "stats_handler")
 		// get memory usage
 		pUsage, total, free, err := getMemoryUsage()
 		if err != nil {
 			ctx.Send("Failed to get memory usage")
-			sugar.Errorf("Failed to get memory usage: %v", err)
+			utils.SLogger.Warn("Failed to get memory usage", "err", err, "source", "stats_handler")
 			return
 		}
 
@@ -27,14 +26,14 @@ func CreateStatsHandler(sugar *zap.SugaredLogger, db *utils.DB, aiChatter *utils
 		dbSize, tableSize, err := db.GetSize()
 		if err != nil {
 			ctx.Send("Failed to get db size")
-			sugar.Errorf("Failed to get db size: %v", err)
+			utils.SLogger.Warn("Failed to get db size", "err", err, "source", "stats_handler")
 			return
 		}
 
 		dbRowCount, err := db.GetRowCount()
 		if err != nil {
 			ctx.Send("Failed to get row count")
-			sugar.Errorf("Failed to get row count: %v", err)
+			utils.SLogger.Warn("Failed to get row count", "err", err, "source", "stats_handler")
 		}
 
 		upTime := timeToHumanReadable(time.Since(utils.StartTime))

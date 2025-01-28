@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"skadi_bot/handlers"
 	pb "skadi_bot/proto"
@@ -10,31 +9,24 @@ import (
 
 	zero "github.com/wdvxdr1123/ZeroBot"
 	"github.com/wdvxdr1123/ZeroBot/driver"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
-	logger, err := zap.NewProduction()
-	if err != nil {
-		log.Printf("Failed to create logger: %v, no logs will be printed thus far", err)
-	}
-	defer logger.Sync()
-	sugar := logger.Sugar()
-
-	sugar.Info("Starting bot")
+	utils.SLogger.Info("Starting bot")
 	grpc_addr := os.Getenv("GRPC_ADDR")
 	grpc_port := os.Getenv("GRPC_PORT")
 	if grpc_addr == "" || grpc_port == "" {
-		sugar.Fatal("GRPC_ADDR or GRPC_PORT is empty")
+		utils.SLogger.Error("GRPC_ADDR or GRPC_PORT is empty", "grpc_addr", grpc_addr, "grpc_port", grpc_port)
+		os.Exit(1)
 	}
 	addr := grpc_addr + ":" + grpc_port
-	log.Printf("GRPC_ADDR: %s", addr)
-	sugar.Infow("Get GRPC_ADDR", "addr", addr)
+	utils.SLogger.Info("Get GRPC address", "addr", addr)
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		sugar.Fatal("Failed to create GRPC client: %v", err)
+		utils.SLogger.Error("Failed to create GRPC client", "err", err)
+		os.Exit(1)
 	}
 	defer conn.Close()
 
@@ -42,36 +34,41 @@ func main() {
 
 	aiChatter, err := utils.NewAiChatter()
 	if err != nil {
-		sugar.Fatalf("Failed to create AIChatter: %v", err)
+		utils.SLogger.Error("Failed to create AIChatter", "err", err)
+		os.Exit(1)
 	}
 
 	db, err := utils.NewDB()
 	if err != nil {
-		sugar.Fatal("Failed to create DB: %v", err)
+		utils.SLogger.Error("Failed to create DB", "err", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	groupId, err := strconv.ParseInt(os.Getenv("GROUP_ID"), 10, 64)
 	if err != nil {
-		sugar.Fatalf("Failed to parse GROUP_ID: %v", err)
+		utils.SLogger.Error("Failed to parse GROUP_ID", "err", err)
+		os.Exit(1)
 	}
 	adminId, err := strconv.ParseInt(os.Getenv("ADMIN_ID"), 10, 64)
 	if err != nil {
-		sugar.Fatalf("Failed to parse ADMIN_ID: %v", err)
+		utils.SLogger.Error("Failed to parse ADMIN_ID", "err", err)
+		os.Exit(1)
 	}
 
 	go utils.StartMetric()
 
-	zero.OnCommand("$ct", utils.NewGroupCheckRule(groupId), utils.NewIsAdminRule(adminId)).Handle(handlers.CreateClearContextHandler(sugar, aiChatter))
-	zero.OnCommand("$stats", utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateStatsHandler(sugar, db, aiChatter))
-	zero.OnCommand("$rv", utils.NewIsAdminRule(adminId)).Handle(handlers.CreateRebuildHandler(sugar, client, db))
-	zero.OnMessage(utils.NewGroupCheckRule(groupId), utils.NewAtMeRule()).Handle(handlers.CreateAtMeHandler(sugar, aiChatter))
-	zero.OnMessage(utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateMsgHandler(sugar, client, aiChatter, db))
+	zero.OnCommand("$ct", utils.NewGroupCheckRule(groupId), utils.NewIsAdminRule(adminId)).Handle(handlers.CreateClearContextHandler(aiChatter))
+	zero.OnCommand("$stats", utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateStatsHandler(db, aiChatter))
+	zero.OnCommand("$rv", utils.NewIsAdminRule(adminId)).Handle(handlers.CreateRebuildHandler(client, db))
+	zero.OnMessage(utils.NewGroupCheckRule(groupId), utils.NewAtMeRule()).Handle(handlers.CreateAtMeHandler(aiChatter))
+	zero.OnMessage(utils.NewGroupCheckRule(groupId)).Handle(handlers.CreateMsgHandler(client, aiChatter, db))
 
-	sugar.Infof("Start Run")
+	utils.SLogger.Info("Start Run")
 	wsAddr := os.Getenv("WS_ADDR")
 	if wsAddr == "" {
-		sugar.Fatal("WS_ADDR is empty")
+		utils.SLogger.Error("WS_ADDR is empty")
+		os.Exit(1)
 	}
 	zero.RunAndBlock(&zero.Config{
 		Driver: []zero.Driver{

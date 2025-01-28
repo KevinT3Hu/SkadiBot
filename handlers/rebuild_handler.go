@@ -9,12 +9,11 @@ import (
 	"time"
 
 	zero "github.com/wdvxdr1123/ZeroBot"
-	"go.uber.org/zap"
 )
 
 var RebuildLock sync.Mutex
 
-func CreateRebuildHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClient, db *utils.DB) func(ctx *zero.Ctx) {
+func CreateRebuildHandler(client pb.Doc2VecServiceClient, db *utils.DB) func(ctx *zero.Ctx) {
 	return func(ctx *zero.Ctx) {
 		ctx.Block()
 
@@ -28,7 +27,7 @@ func CreateRebuildHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClie
 			elapsed := time.Since(timer).Milliseconds()
 			msg := "Rebuild message vector took " + strconv.FormatInt(elapsed, 10) + "ms"
 			ctx.Send(msg)
-			sugar.Info(msg)
+			utils.SLogger.Info(msg, "source", "rebuild_handler")
 		}()
 		// Rebuild the model
 		err := db.RebuildMessageVec(func(s string) ([]float32, error) {
@@ -40,7 +39,7 @@ func CreateRebuildHandler(sugar *zap.SugaredLogger, client pb.Doc2VecServiceClie
 		})
 		if err != nil {
 			ctx.Send("Failed to rebuild message vector: " + err.Error())
-			sugar.Errorf("Failed to rebuild message vector: %v", err)
+			utils.SLogger.Warn("Failed to rebuild message vector", "source", "rebuild_handler", "err", err)
 			return
 		}
 	}

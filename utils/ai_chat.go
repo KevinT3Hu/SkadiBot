@@ -94,7 +94,13 @@ func (c *AIChatter) getRespondWithPrompt(ctx context.Context, msg string, prompt
 	if err != nil {
 		return "", err
 	}
-	return ret.Choices[0].Message.Content, nil
+	content := ret.Choices[0].Message.Content
+	c.chatContext = append(c.chatContext, ret.Choices[0].Message)
+	if len(c.chatContext) > 100 {
+		c.chatContext = c.chatContext[1:]
+	}
+	SLogger.Info("AI response", "response", content, "source", "ai_chatter")
+	return content, nil
 }
 
 func (c *AIChatter) GetRespond(ctx context.Context, msg string) (string, error) {
