@@ -45,13 +45,10 @@ func (c *AIChatter) Feed(msg string) {
 	}
 
 	c.contextLock.Lock()
-	defer c.contextLock.Unlock()
 	c.chatContext = append(c.chatContext, m)
+	c.contextLock.Unlock()
 
-	// if the context is too long, remove the oldest message
-	if len(c.chatContext) > 100 {
-		c.chatContext = c.chatContext[1:]
-	}
+	c.truncateChatContext()
 }
 
 var (
@@ -65,6 +62,14 @@ func (c *AIChatter) GetAtRespond(ctx context.Context, msg string) (string, error
 		return "", err
 	}
 	return response, nil
+}
+
+func (c *AIChatter) truncateChatContext() {
+	c.contextLock.Lock()
+	defer c.contextLock.Unlock()
+	if len(c.chatContext) >= 100 {
+		c.chatContext = c.chatContext[81:]
+	}
 }
 
 func (c *AIChatter) getRespondWithPrompt(ctx context.Context, msg string, prompt string) (string, error) {
@@ -94,11 +99,11 @@ func (c *AIChatter) getRespondWithPrompt(ctx context.Context, msg string, prompt
 	if err != nil {
 		return "", err
 	}
+	c.contextLock.Lock()
 	content := ret.Choices[0].Message.Content
 	c.chatContext = append(c.chatContext, ret.Choices[0].Message)
-	if len(c.chatContext) > 100 {
-		c.chatContext = c.chatContext[1:]
-	}
+	c.contextLock.Unlock()
+	c.truncateChatContext()
 	SLogger.Info("AI response", "response", content, "source", "ai_chatter")
 	return content, nil
 }
