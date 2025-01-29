@@ -20,7 +20,10 @@ func StartMetric() {
 	http.ListenAndServe(":"+metric_port, servmux)
 }
 
-var latencyBucket = []float64{1, 3, 5, 7, 10, 20, 50, 100, 500, 1000}
+var (
+	latencyBucket   = []float64{1, 3, 5, 7, 10, 20, 50, 100, 500, 1000}
+	aiLatencyBucket = []float64{1000, 2000, 4000, 5000, 7500, 10000, 15000, 20000, 30000, 50000, 100000}
+)
 
 var (
 	MessageRecCounter = promauto.NewCounter(prometheus.CounterOpts{
@@ -63,6 +66,6 @@ var (
 	AIRequestLatency = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "ai_request_latency",
 		Help:    "Latency of AI request",
-		Buckets: latencyBucket,
+		Buckets: aiLatencyBucket,
 	})
 )
