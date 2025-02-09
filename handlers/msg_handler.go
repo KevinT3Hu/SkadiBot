@@ -75,6 +75,7 @@ func CreateMsgHandler(client pb.Doc2VecServiceClient, db *utils.DB) func(ctx *ze
 			if aiResp != "" {
 				msgSend := "> " + aiResp
 				utils.SLogger.Info("Send response", "msg", msg, "response", msgSend, "source", "msg_handler")
+				utils.SendMsgCounter.Add(1)
 				ctx.Send(msgSend)
 				ctx.Block()
 				return
@@ -97,6 +98,7 @@ func CreateMsgHandler(client pb.Doc2VecServiceClient, db *utils.DB) func(ctx *ze
 			if exists && utils.ProbGeneratorManager.Get(utils.ProbTypeHit) {
 				utils.MessageHitReplyCounter.Inc()
 				utils.SLogger.Info("Send response", "msg", msg, "next", next, "source", "msg_handler")
+				utils.SendMsgCounter.Add(1)
 				ctx.Send(next)
 				ctx.Block()
 				return
@@ -111,6 +113,7 @@ func CreateMsgHandler(client pb.Doc2VecServiceClient, db *utils.DB) func(ctx *ze
 			if nearestNext != "" && utils.ProbGeneratorManager.Get(utils.ProbTypeMiss) {
 				utils.MessageMissReplyCounter.Inc()
 				utils.SLogger.Info("Send response", "msg", msg, "nearestNext", nearestNext, "source", "msg_handler")
+				utils.SendMsgCounter.Add(1)
 				ctx.Send(nearestNext)
 				ctx.Block()
 				return

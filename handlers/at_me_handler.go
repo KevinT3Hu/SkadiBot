@@ -23,6 +23,7 @@ func CreateAtMeHandler() func(ctx *zero.Ctx) {
 
 		// Send the response
 		utils.SLogger.Info("Send response", "response", response, "source", "at_me")
+		utils.SendMsgCounter.Add(1)
 		ctx.Send(response)
 	}
 }

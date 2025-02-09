@@ -3,6 +3,7 @@ package server
 import (
 	"skadi_bot/utils"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -107,4 +108,16 @@ func GetConfig(c *gin.Context) {
 
 func HealthCheck(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "ok"})
+}
+
+func GetUptime(c *gin.Context) {
+	startTime := utils.StartTime
+	uptime := time.Now().Sub(startTime)
+	c.JSON(200, gin.H{"uptime": uptime.Seconds()})
+}
+
+func GetMsgCounter(c *gin.Context) {
+	recvMsgCounter := utils.RecvMsgCounter.Load()
+	sendMsgCounter := utils.SendMsgCounter.Load()
+	c.JSON(200, gin.H{"recvMsgCounter": recvMsgCounter, "sendMsgCounter": sendMsgCounter})
 }

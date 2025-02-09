@@ -20,6 +20,12 @@ func (s *SkadiServer) route() {
 	s.r.GET("/health", HealthCheck)
 }
 
+func (s *SkadiServer) routeInfo() {
+	g := s.r.Group("/info")
+	g.GET("/uptime", GetUptime)
+	g.GET("/msgCounter", GetMsgCounter)
+}
+
 func (s *SkadiServer) routeUpdateConfig() {
 	g := s.r.Group("/update")
 	g.Use(AuthMiddleware())
