@@ -3,18 +3,56 @@ package utils
 import (
 	"math"
 	"math/rand"
+	"sync"
 )
 
-type ProbGenerator struct {
+type ProbType string
+
+var (
+	ProbTypeHit        ProbType = "hit"
+	ProbTypeMiss       ProbType = "miss"
+	ProbTypeAIFeed     ProbType = "ai_feed"
+	ProbTypeAIResponse ProbType = "ai_response"
+)
+
+type probGeneratorManager struct {
+	probGenerators map[ProbType]*probGenerator
+	mu             sync.Mutex
+}
+
+func NewProbGeneratorManager(config ProbConfig) *probGeneratorManager {
+	probGenerators := make(map[ProbType]*probGenerator)
+	probGenerators[ProbTypeHit] = NewProbGenerator(config.HitProb)
+	probGenerators[ProbTypeMiss] = NewProbGenerator(config.MissProb)
+	probGenerators[ProbTypeAIFeed] = NewProbGenerator(config.AIFeedProb)
+	probGenerators[ProbTypeAIResponse] = NewProbGenerator(config.AIResponseProb)
+	return &probGeneratorManager{
+		probGenerators: probGenerators,
+	}
+}
+
+func (pgm *probGeneratorManager) Get(probType ProbType) bool {
+	pgm.mu.Lock()
+	defer pgm.mu.Unlock()
+	return pgm.probGenerators[probType].Get()
+}
+
+func (pgm *probGeneratorManager) UpdateProb(probType ProbType, avgProb float64) {
+	pgm.mu.Lock()
+	defer pgm.mu.Unlock()
+	pgm.probGenerators[probType] = NewProbGenerator(avgProb)
+}
+
+type probGenerator struct {
 	probTransition func(float64) float64
 	prob           float64
 	probInitial    float64
 }
 
-func NewProbGenerator(avgProb float64) *ProbGenerator {
+func NewProbGenerator(avgProb float64) *probGenerator {
 	probInitial := findProb(avgProb)
 	println("Prob Generator: avgProb: ", avgProb, " probInitial: ", probInitial)
-	return &ProbGenerator{
+	return &probGenerator{
 		probTransition: func(prob float64) float64 {
 			return prob + probInitial
 		},
@@ -53,7 +91,7 @@ func calcExp(probInitial float64) float64 {
 	return 1 / exp
 }
 
-func (pg *ProbGenerator) Get() bool {
+func (pg *probGenerator) Get() bool {
 	num := rand.Float64()
 	if num < pg.prob {
 		pg.prob = pg.probInitial
@@ -63,6 +101,6 @@ func (pg *ProbGenerator) Get() bool {
 	return false
 }
 
-func (pg *ProbGenerator) GetInitialProb() float64 {
+func (pg *probGenerator) GetInitialProb() float64 {
 	return pg.probInitial
 }

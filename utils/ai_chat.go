@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,22 +18,20 @@ type AIChatter struct {
 	lastRequestTime atomic.Int64
 }
 
-func NewAiChatter() (*AIChatter, error) {
-	baseUrl := os.Getenv("AI_API_URL")
-	apiKeyFile := os.Getenv("AI_API_KEY_FILE")
-	apiKey, err := os.ReadFile(apiKeyFile)
-	if err != nil {
-		return nil, err
-	}
-
-	apiKeyS := strings.TrimSpace(string(apiKey))
-	config := openai.DefaultConfig(apiKeyS)
-	config.BaseURL = baseUrl
+func NewAiChatter(apiConfig AIApiConfig) *AIChatter {
+	config := openai.DefaultConfig(apiConfig.APIKey)
+	config.BaseURL = apiConfig.BaseUrl
 	client := openai.NewClientWithConfig(config)
 
 	return &AIChatter{
 		client: client,
-	}, nil
+	}
+}
+
+func (c *AIChatter) NewConfig(apiConfig AIApiConfig) {
+	config := openai.DefaultConfig(apiConfig.APIKey)
+	config.BaseURL = apiConfig.BaseUrl
+	c.client = openai.NewClientWithConfig(config)
 }
 
 // feed a message to the chat context without getting a response
@@ -51,13 +48,9 @@ func (c *AIChatter) Feed(msg string) {
 	c.truncateChatContext()
 }
 
-var (
-	systemHint = os.Getenv("AI_SYSTEM_HINT")
-	atHint     = os.Getenv("AI_AT_HINT")
-)
-
 func (c *AIChatter) GetAtRespond(ctx context.Context, msg string) (string, error) {
-	response, err := c.getRespondWithPrompt(ctx, msg, atHint)
+	hint := GetConfig().PromptConfig.AIAtRequestPrompt
+	response, err := c.getRespondWithPrompt(ctx, msg, hint)
 	if err != nil {
 		return "", err
 	}
@@ -109,6 +102,7 @@ func (c *AIChatter) getRespondWithPrompt(ctx context.Context, msg string, prompt
 }
 
 func (c *AIChatter) GetRespond(ctx context.Context, msg string) (string, error) {
+	systemHint := GetConfig().PromptConfig.AIRequestPrompt
 	response, err := c.getRespondWithPrompt(ctx, msg, systemHint)
 	if err != nil {
 		return "", err

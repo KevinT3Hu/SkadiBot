@@ -10,7 +10,7 @@ import (
 	zero "github.com/wdvxdr1123/ZeroBot"
 )
 
-func CreateStatsHandler(db *utils.DB, aiChatter *utils.AIChatter) func(*zero.Ctx) {
+func CreateStatsHandler(db *utils.DB) func(*zero.Ctx) {
 	return func(ctx *zero.Ctx) {
 		ctx.Block()
 		utils.SLogger.Info("Getting stats", "source", "stats_handler")
@@ -38,7 +38,7 @@ func CreateStatsHandler(db *utils.DB, aiChatter *utils.AIChatter) func(*zero.Ctx
 
 		upTime := timeToHumanReadable(time.Since(utils.StartTime))
 
-		contextLength := aiChatter.GetChatContextLength()
+		contextLength := utils.AIChatterClient.GetChatContextLength()
 
 		msg := fmt.Sprintf("Memory usage: %s\nTotal: %s\nFree: %s\nDB size: %s\nTable size: %s\nDB row count: %d\nUp time: %s\nChat Context Length: %d", pUsage, total, free, dbSize, tableSize, dbRowCount, upTime, contextLength)
 
