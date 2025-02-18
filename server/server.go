@@ -16,6 +16,7 @@ func NewSkadiServer() *SkadiServer {
 
 func (s *SkadiServer) route() {
 	s.routeUpdateConfig()
+	s.routeInfo()
 	s.r.GET("/config", GetConfig)
 	s.r.GET("/health", HealthCheck)
 }
@@ -31,7 +32,7 @@ func (s *SkadiServer) routeUpdateConfig() {
 	g.Use(AuthMiddleware())
 	g.POST("/doc2vecDestination", UpdateDoc2VecGrpcDestination)
 	g.POST("/prob", UpdateProb)
-	g.POST("/prompt", UpdatePrompt)
+	g.POST("/prompt", UpdatePromptPreset)
 	g.POST("/aiBaseUrl", UpdateAIBaseUrl)
 	g.POST("/aiKey", UpdateAIKey)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -34,8 +35,23 @@ func (c *AIChatter) NewConfig(apiConfig AIApiConfig) {
 	c.client = openai.NewClientWithConfig(config)
 }
 
+func escapeMsg(msg string) string {
+	// escape all ; to "\;"
+	return strings.ReplaceAll(msg, ";", "\\;")
+}
+
 // feed a message to the chat context without getting a response
 func (c *AIChatter) Feed(msg string) {
+	msg = escapeMsg(msg)
+	lastCtx := c.chatContext[len(c.chatContext)-1]
+	if lastCtx.Role == "user" {
+		lastCtx.Content = lastCtx.Content + ";" + msg
+		c.contextLock.Lock()
+		defer c.contextLock.Unlock()
+		c.chatContext[len(c.chatContext)-1] = lastCtx
+		return
+	}
+
 	m := openai.ChatCompletionMessage{
 		Role:    "user",
 		Content: msg,
@@ -49,7 +65,11 @@ func (c *AIChatter) Feed(msg string) {
 }
 
 func (c *AIChatter) GetAtRespond(ctx context.Context, msg string) (string, error) {
-	hint := GetConfig().PromptConfig.AIAtRequestPrompt
+	preset, err := GetConfig().PromptConfig.GetActivePreset()
+	if err != nil {
+		return "", err
+	}
+	hint := preset.AIAtRequestPrompt
 	response, err := c.getRespondWithPrompt(ctx, msg, hint)
 	if err != nil {
 		return "", err
@@ -60,8 +80,8 @@ func (c *AIChatter) GetAtRespond(ctx context.Context, msg string) (string, error
 func (c *AIChatter) truncateChatContext() {
 	c.contextLock.Lock()
 	defer c.contextLock.Unlock()
-	if len(c.chatContext) >= 100 {
-		c.chatContext = c.chatContext[81:]
+	if len(c.chatContext) >= 20 {
+		c.chatContext = c.chatContext[1:]
 	}
 }
 
@@ -102,7 +122,11 @@ func (c *AIChatter) getRespondWithPrompt(ctx context.Context, msg string, prompt
 }
 
 func (c *AIChatter) GetRespond(ctx context.Context, msg string) (string, error) {
-	systemHint := GetConfig().PromptConfig.AIRequestPrompt
+	preset, err := GetConfig().PromptConfig.GetActivePreset()
+	if err != nil {
+		return "", err
+	}
+	systemHint := preset.AIRequestPrompt
 	response, err := c.getRespondWithPrompt(ctx, msg, systemHint)
 	if err != nil {
 		return "", err
@@ -111,7 +135,7 @@ func (c *AIChatter) GetRespond(ctx context.Context, msg string) (string, error) 
 }
 
 func (c *AIChatter) getIsRequestable() bool {
-	return time.Now().Unix()-c.lastRequestTime.Load() > 30
+	return time.Now().Unix()-c.lastRequestTime.Load() > 1
 }
 
 func (c *AIChatter) updateRequestTime() {

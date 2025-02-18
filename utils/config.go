@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"os"
 	"sync"
 
@@ -14,9 +15,21 @@ type ProbConfig struct {
 	AIResponseProb float64 `yaml:"ai_response_prob"`
 }
 
-type PromptConfig struct {
+type PromptPreset struct {
 	AIRequestPrompt   string `yaml:"ai_request_prompt"`
 	AIAtRequestPrompt string `yaml:"ai_at_request_prompt"`
+}
+
+type PromptConfig struct {
+	Presets      map[string]PromptPreset `yaml:"presets"`
+	ActivePreset string                  `yaml:"active_preset"`
+}
+
+func (c PromptConfig) GetActivePreset() (PromptPreset, error) {
+	if p, ok := c.Presets[c.ActivePreset]; ok {
+		return p, nil
+	}
+	return PromptPreset{}, errors.New("Active preset not found")
 }
 
 type AIApiConfig struct {

@@ -42,29 +42,23 @@ func UpdateProb(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "prob updated"})
 }
 
-func UpdatePrompt(c *gin.Context) {
-	newPrompt := c.PostForm("prompt")
-	if newPrompt == "" {
-		utils.SLogger.Warn("Get empty prompt", "source", "server")
-		c.JSON(400, gin.H{"error": "prompt is required"})
+func UpdatePromptPreset(c *gin.Context) {
+	presetName := c.PostForm("name")
+	if presetName == "" {
+		utils.SLogger.Warn("Get empty preset name", "source", "server")
+		c.JSON(400, gin.H{"error": "name is required"})
 		return
 	}
-	isSystemPromptParam := c.PostForm("isSystemPrompt")
-	isSystemPrompt, err := strconv.ParseBool(isSystemPromptParam)
-	if err != nil {
-		utils.SLogger.Warn("Get invalid isSystemPrompt", "isSystemPrompt", isSystemPromptParam, "source", "server")
-		c.JSON(400, gin.H{"error": "isSystemPrompt must be a boolean"})
-	}
-	// Update the prompt
-	utils.SLogger.Info("UpdatePrompt", "isSystemPrompt", isSystemPrompt, "prompt", newPrompt, "source", "server")
+	systemPrompt := c.PostForm("systemPrompt")
+	atPrompt := c.PostForm("atPrompt")
 	config := utils.GetConfig()
-	if isSystemPrompt {
-		config.PromptConfig.AIRequestPrompt = newPrompt
-	} else {
-		config.PromptConfig.AIAtRequestPrompt = newPrompt
+	preset := utils.PromptPreset{
+		AIRequestPrompt:   systemPrompt,
+		AIAtRequestPrompt: atPrompt,
 	}
+	config.PromptConfig.Presets[presetName] = preset
 	utils.UpdateConfig(config)
-	c.JSON(200, gin.H{"message": "prompt updated"})
+	c.JSON(200, gin.H{"message": "preset updated"})
 }
 
 func UpdateAIBaseUrl(c *gin.Context) {
